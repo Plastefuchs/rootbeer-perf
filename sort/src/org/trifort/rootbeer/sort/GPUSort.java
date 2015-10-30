@@ -199,6 +199,8 @@ public class GPUSort {
 //      System.out.println("gpu_required_memory: "+context0.getRequiredMemory());
 //      System.out.println("gpu_time: "+gpuTime);
       
+      // TODO: move outside of loop or flush array
+      
       // csv header
       
       statsHeader.add("serialization_time");
