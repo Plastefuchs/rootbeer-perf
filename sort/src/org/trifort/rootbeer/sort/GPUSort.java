@@ -14,6 +14,10 @@ import java.io.FileWriter;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
 public class GPUSort {
 
   private int[] newArray(int size){
@@ -247,8 +251,14 @@ public class GPUSort {
       stats.add(context0.getRequiredMemory());
       stats.add(gpuTime);
       
-      generateCsvFile("./stats.csv", stats, statsHeader);
-
+      
+      DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+      Date date = new Date();
+      System.out.println(dateFormat.format(date));
+      
+      generateCsvFile("./sort_stats.csv", stats, statsHeader);
+      
+      
       
       // check that each array was properly sorted
       // shuffle afterwards for the CPU sorting
