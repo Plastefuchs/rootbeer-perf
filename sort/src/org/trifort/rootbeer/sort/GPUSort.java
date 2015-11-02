@@ -34,8 +34,8 @@ public class GPUSort {
   // numMultiProcessors*blocksPerMultiProcessor;
   private int numberOfMultiProcessors = 2; //14
   private int blocksPerMultiProcessor = 256; //512
-
- 
+  private int numberOfRuns = 10;
+  
 
   public void checkSorted(int[] array, int outerIndex){
     for(int index = 0; index < array.length; ++index){
@@ -115,6 +115,26 @@ public class GPUSort {
   // 64 FP64 CUDA cores -> 2 FP64 SM
   // 14 SM 
   
+  private Context createContext(GpuDevice device0){
+	    //create a context
+	    //after you run you can call context0.getRequiredMemory() to see
+	    //what value to enter here
+	  Context context0 = device0.createContext(); // 4212880 as example
+	    //use more die area for shared memory instead of
+	    //cache. the shared memory is a software defined
+	    //cache that, if programmed properly, can perform
+	    //better than the hardware cache
+	    //see (CUDA Occupancy calculator)[http://developer.download.nvidia.com/compute/cuda/CUDA_Occupancy_calculator.xls]
+	    context0.setCacheConfig(CacheConfig.PREFER_SHARED);
+	    //wire thread config for throughput mode. after
+	    //calling buildState, the book-keeping information
+	    //will be cached in the JNI driver
+	    int sizeBy2 = this.arraySize/2;
+	    int outerCount = this.blocksPerMultiProcessor * this.numberOfMultiProcessors;
+	    context0.setThreadConfig(sizeBy2, outerCount, outerCount * sizeBy2);
+	    return context0;
+  }
+  
   public void sort(){
 
     //should have 192 threads per SM
@@ -164,14 +184,13 @@ public class GPUSort {
     List<Long> gpuTimeList = new ArrayList<Long>(1);
     List<Double> ratioList = new ArrayList<Double>(1);
 
-
+    
     int runs = 0;
-	int numberOfRuns = 10;  
+  
     // limit the run
-    while(runs < numberOfRuns){
+    while(runs < this.numberOfRuns){
       runs += 1;
       System.out.println("Run "+runs+" start");
-
 
       //randomize the array to be sorted
       for(int i = 0; i < outerCount; ++i){
@@ -192,7 +211,7 @@ public class GPUSort {
       StatsRow row0 = context0.getStats();
       
       if (this.outputConsoleStats){
-      
+	  System.out.println("The serialization time of each first run is an anomaliy and should either be looked into further or discarded");
       System.out.println("serialization_time: "+row0.getSerializationTime());
       System.out.println("driver_memcopy_to_device_time: "+row0.getDriverMemcopyToDeviceTime());
       System.out.println("driver_execution_time: "+row0.getDriverExecTime());
@@ -217,6 +236,8 @@ public class GPUSort {
       statsHeader.add("gpu_required_memory");
       statsHeader.add("gpu_time");
       // csv stats
+      // the serialization time of the first run is higher than any of the later runs
+      // there is no clear indication why that is the case
       stats.add(row0.getSerializationTime());
       stats.add(row0.getDriverMemcopyToDeviceTime());
       stats.add(row0.getDriverExecTime());
@@ -249,7 +270,8 @@ public class GPUSort {
       System.out.println("ratio: "+ratio);
       }
       ratioList.add(ratio);
-     
+      System.out.println("Run "+runs+" end");
+
       
     }
     double allRatios = 0;
