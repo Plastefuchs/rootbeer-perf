@@ -24,6 +24,18 @@ public class GPUSort {
     }
     return ret;
   }
+  
+  private boolean outputConsoleStats = false;
+  
+  // size of the inner arrays
+  private int arraySize = 16; //2048
+
+  // number of processors and block size defines the number of inner arrays
+  // numMultiProcessors*blocksPerMultiProcessor;
+  private int numberOfMultiProcessors = 2; //14
+  private int blocksPerMultiProcessor = 256; //512
+
+ 
 
   public void checkSorted(int[] array, int outerIndex){
     for(int index = 0; index < array.length; ++index){
@@ -84,7 +96,6 @@ public class GPUSort {
 	      for (java.lang.Number item : stats){
 	    	  writer.append(item.toString());
 	    	  writer.append(COMMA_DELIMITER);
-	    	  System.out.println(item);
 	      }
 		writer.append(NEW_LINE_SEPARATOR);
 	    writer.flush();
@@ -108,23 +119,19 @@ public class GPUSort {
 
     //should have 192 threads per SM
 
-	// inner array size
-//    int size = 2048;
-	int size = 16;
-    int sizeBy2 = size / 2;
-//    int numMultiProcessors = 14;
-//    int blocksPerMultiProcessor = 512;
+    int sizeBy2 = this.arraySize / 2;
+
     int numMultiProcessors = 2;
     int blocksPerMultiProcessor = 256;
 
-    // set size of the outer array to be
-    int outerCount = numMultiProcessors*blocksPerMultiProcessor;
-
-    int[][] array = new int[outerCount][];
+    // set size of the outer array
+    int outerCount = this.numberOfMultiProcessors * this.blocksPerMultiProcessor;
+    
     // create array as wide as the number of SM * the blocks per SM
+    int[][] array = new int[outerCount][];
     // create one size wide inner array per block(thread group)
     for(int i = 0; i < outerCount; ++i){
-      array[i] = newArray(size);
+      array[i] = newArray(this.arraySize);
     }
     
     Rootbeer rootbeer = new Rootbeer();
@@ -148,7 +155,6 @@ public class GPUSort {
     context0.buildState();
     
     // Lists to create average stats
-    List<Long> serialTimeList = new ArrayList<Long>(1);
     List<Long> driverMemcopyToDeviceTimeList = new ArrayList<Long>(1);
     List<Long> driverExecTimeList = new ArrayList<Long>(1);
     List<Long> driverMemcopeFromDeviceTimeList = new ArrayList<Long>(1);
@@ -157,12 +163,10 @@ public class GPUSort {
     List<Long> gpuRequiredMemList = new ArrayList<Long>(1);
     List<Long> gpuTimeList = new ArrayList<Long>(1);
     List<Double> ratioList = new ArrayList<Double>(1);
-    // stat array for csv file
-    List<java.lang.Number> stats = new ArrayList<java.lang.Number>(1);
-    List<String> statsHeader = new ArrayList<String>(1);
+
 
     int runs = 0;
-	int numberOfRuns = 2;  
+	int numberOfRuns = 10;  
     // limit the run
     while(runs < numberOfRuns){
       runs += 1;
@@ -173,36 +177,37 @@ public class GPUSort {
       for(int i = 0; i < outerCount; ++i){
         fisherYates(array[i]);
       }
-      
-      System.out.println(Arrays.toString(array[0]));
+
       // start stopwatch
       long gpuStart = System.currentTimeMillis();
-
       //run the cached throughput mode state.
       //the data now reachable from the only
       //GPUSortKernel is serialized to the GPU
       context0.run();
-      System.out.println(Arrays.toString(array[0]));
-
       // stats and stat output
       long gpuStop = System.currentTimeMillis();
       long gpuTime = gpuStop - gpuStart;
-      StatsRow row0 = context0.getStats();
-      serialTimeList.add(row0.getSerializationTime());
-
-//      System.out.println("serialization_time: "+row0.getSerializationTime());
-//      System.out.println("driver_memcopy_to_device_time: "+row0.getDriverMemcopyToDeviceTime());
-//      System.out.println("driver_execution_time: "+row0.getDriverExecTime());
-//      System.out.println("driver_memcopy_from_device_time: "+row0.getDriverMemcopyFromDeviceTime());
-//      System.out.println("total_driver_execution_time: "+row0.getTotalDriverExecutionTime());
-//      System.out.println("deserialization_time: "+row0.getDeserializationTime());
-//      System.out.println("gpu_required_memory: "+context0.getRequiredMemory());
-//      System.out.println("gpu_time: "+gpuTime);
       
-      // TODO: move outside of loop or flush array
+      // pull stats from the context
+      StatsRow row0 = context0.getStats();
+      
+      if (this.outputConsoleStats){
+      
+      System.out.println("serialization_time: "+row0.getSerializationTime());
+      System.out.println("driver_memcopy_to_device_time: "+row0.getDriverMemcopyToDeviceTime());
+      System.out.println("driver_execution_time: "+row0.getDriverExecTime());
+      System.out.println("driver_memcopy_from_device_time: "+row0.getDriverMemcopyFromDeviceTime());
+      System.out.println("total_driver_execution_time: "+row0.getTotalDriverExecutionTime());
+      System.out.println("deserialization_time: "+row0.getDeserializationTime());
+      System.out.println("gpu_required_memory: "+context0.getRequiredMemory());
+      System.out.println("gpu_time: "+gpuTime);
+      }
+      
+      // stat array for csv file
+      List<java.lang.Number> stats = new ArrayList<java.lang.Number>(1);
+      List<String> statsHeader = new ArrayList<String>(1);
       
       // csv header
-      
       statsHeader.add("serialization_time");
       statsHeader.add("driver_memcopy_to_device_time");
       statsHeader.add("driver_execution_time");
@@ -224,8 +229,8 @@ public class GPUSort {
       generateCsvFile("./stats.csv", stats, statsHeader);
 
       
-      // check that array was properly sorted
-      // populate with new random numbers
+      // check that each array was properly sorted
+      // shuffle afterwards for the CPU sorting
       for(int i = 0; i < outerCount; ++i){
         checkSorted(array[i], i);
         fisherYates(array[i]);
@@ -237,10 +242,12 @@ public class GPUSort {
       }
       long cpuStop = System.currentTimeMillis();
       long cpuTime = cpuStop - cpuStart;
-      System.out.println("cpu_time: "+cpuTime);
+
       double ratio = (double) cpuTime / (double) gpuTime;
+      if (this.outputConsoleStats){
+      System.out.println("cpu_time: "+cpuTime);
       System.out.println("ratio: "+ratio);
-//      System.out.println(Arrays.deepToString(array));
+      }
       ratioList.add(ratio);
      
       
@@ -249,10 +256,11 @@ public class GPUSort {
     for (double ratio : ratioList){
     	allRatios += ratio;
     }
+    if (this.outputConsoleStats){
     System.out.println("Number of runs: " + runs);
-    System.out.println("Average ratio of GPU<->CPU: "+allRatios/runs);
-    System.out.println("Average serialization time: "+averageStat(serialTimeList, runs));
+    }
 //    context0.close();
+    
   }
 
   public static void main(String[] args){
