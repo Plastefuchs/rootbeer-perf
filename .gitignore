@@ -3,7 +3,8 @@
 # created stat files
 
 *.csv
-sort/.~lock.stats.csv#
+#sort/.~lock.stats.csv#
+*.~lock.stats.csv#
 
 # Created by https://www.gitignore.io/api/java
 

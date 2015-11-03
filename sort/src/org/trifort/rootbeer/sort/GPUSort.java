@@ -1,5 +1,4 @@
 // TODO: add cli parameter
-// TODO: add output of the used parameters in separate file (same date stamp in name to connect it with the recorded data)
 // TODO: refactor to have methods for context creation
 
 package org.trifort.rootbeer.sort;
@@ -49,14 +48,18 @@ public class GPUSort {
 
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Date date = new Date();
-		this.fileName = dateFormat.format(date);
+		this.fileName = ("sort_" + dateFormat.format(date));
 		
 		// ugly mapping
 		this.parameter.put("arraySize", this.arraySize);
 		this.parameter.put("numberOfMultiProcessors", this.numberOfMultiProcessors);
 		this.parameter.put("blocksPerMultiProcessor", this.blocksPerMultiProcessor);
 		this.parameter.put("numberOfRuns", this.numberOfRuns);
-		
+		this.writeParameterFile();
+
+	}
+
+	private void writeParameterFile(){
 		try{
 		File parameterFile = new File(this.fileName + "_parameter.csv");
 		FileWriter writer = new FileWriter(parameterFile);
@@ -72,7 +75,7 @@ public class GPUSort {
 			e.printStackTrace();
 		}
 	}
-
+	
 	private int[] newArray(int size) {
 		int[] ret = new int[size];
 
