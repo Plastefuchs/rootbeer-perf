@@ -1,0 +1,28 @@
+<project>
+  <target name="clean">
+    <delete dir="build"/>
+  </target>
+  <target name="compile">
+    <mkdir dir="build/classes"/>
+    <javac srcdir="src" destdir="build/classes" classpath="../rblib/Rootbeer.jar" includeantruntime="false"/>
+  </target>
+  <target name="jar" depends="compile">
+    <jar destfile="dist/pi.jar" basedir="build/classes">
+      <manifest>
+        <attribute name="Main-Class" value="org.trifort.rootbeer.pi.GPUPi"/>
+      </manifest>
+    </jar>
+  </target>
+  <target name="gpu" depends="jar">
+    <exec executable="java">
+      <!--Build without debug-->
+      <arg line="-jar ../rblib/Rootbeer.jar dist/pi.jar dist/pi-gpu.jar -64bit -noexceptions -shared-mem-size 8192 -noarraychecks"/>
+    </exec>
+  </target>
+  <target name="gpu-debug" depends="jar">
+    <exec executable="java">
+      <!--Build without debug-->
+      <arg line="-jar ../rblib/Rootbeer.jar dist/pi.jar dist/pi-gpu.jar -64bit"/>
+    </exec>
+  </target>
+</project>

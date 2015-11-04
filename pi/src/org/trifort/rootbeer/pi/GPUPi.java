@@ -1,0 +1,286 @@
+// TODO: cli parameter
+
+package org.trifort.rootbeer.pi;
+
+import org.trifort.rootbeer.runtime.Rootbeer;
+import org.trifort.rootbeer.runtime.GpuDevice;
+import org.trifort.rootbeer.runtime.Context;
+import org.trifort.rootbeer.runtime.ThreadConfig;
+import org.trifort.rootbeer.runtime.StatsRow;
+import org.trifort.rootbeer.runtime.CacheConfig;
+import java.util.List;
+import java.util.Arrays;
+import java.util.Random;
+import java.util.ArrayList;
+import java.io.FileWriter;
+import java.io.File;
+import java.io.IOException;
+
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class GPUPi {
+
+	// size of the array
+	private int arraySize;
+	private int numberOfMultiProcessors; // 14
+	private int blocksPerMultiProcessor; // 512
+	private int numberOfRuns;
+	private String fileName;
+	private boolean outputConsoleStats = false;
+
+	// ugly way to create a second file with the parameters of the program
+	private Map parameter = new HashMap();
+
+	GPUPi(int arraySize, int numberOfMultiProcessors,
+			int blocksPerMultiProcessor, int numberOfRuns) {
+		this.arraySize = arraySize;
+		this.numberOfMultiProcessors = numberOfMultiProcessors;
+		this.blocksPerMultiProcessor = blocksPerMultiProcessor;
+		this.numberOfRuns = numberOfRuns;
+
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date date = new Date();
+		this.fileName = ("pi_" + dateFormat.format(date));
+
+		// ugly mapping
+		this.parameter.put("arraySize", this.arraySize);
+		this.parameter.put("numberOfMultiProcessors",
+				this.numberOfMultiProcessors);
+		this.parameter.put("blocksPerMultiProcessor",
+				this.blocksPerMultiProcessor);
+		this.parameter.put("numberOfRuns", this.numberOfRuns);
+		this.writeParameterFile();
+
+	}
+
+	private void writeParameterFile() {
+		try {
+			File parameterFile = new File(this.fileName + "_parameter.csv");
+			FileWriter writer = new FileWriter(parameterFile);
+			for (Object key : this.parameter.keySet()) {
+				System.out.println(key + " - " + parameter.get(key));
+				writer.append(key + " - " + parameter.get(key));
+				writer.append("\n");
+			}
+			writer.flush();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void generateCsvFile(String sFileName, List<java.lang.Number> stats,
+			List<String> header) {
+
+		String COMMA_DELIMITER = ",";
+		String NEW_LINE_SEPARATOR = "\n";
+
+		try {
+			File csvFile = new File(sFileName);
+			// if no file exists, create a proper header
+			if (!csvFile.exists()) {
+				FileWriter writer = new FileWriter(csvFile, true);
+				for (String item : header) {
+					writer.append(item);
+					writer.append(COMMA_DELIMITER);
+				}
+				writer.append(NEW_LINE_SEPARATOR);
+				writer.flush();
+				writer.close();
+			}
+			// write the stats to the csv file
+			FileWriter writer = new FileWriter(csvFile, true);
+
+			for (java.lang.Number item : stats) {
+				writer.append(item.toString());
+				writer.append(COMMA_DELIMITER);
+			}
+			writer.append(NEW_LINE_SEPARATOR);
+			writer.flush();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	
+	public double cpuPi(long tries){
+		double inCircle = 0;
+	    LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(System.nanoTime());
+	    for (int i = 0; i < tries; i++){
+	    	double x = lcg.nextDouble();
+	    	double y = lcg.nextDouble();
+	    	double dist = Math.sqrt(x*x + y*y);
+	    	if (dist <= 1.0){
+	    		inCircle++;
+	    	}
+	    			
+	    }
+	    double pi = 4 * inCircle / tries;
+	    return pi;
+
+	}
+	
+
+	public void computePi() {
+
+		// should have 192 threads per SM
+
+//		int sizeBy2 = this.arraySize / 2;
+		int sizeBy2 = this.arraySize;
+		// set size of the outer array
+		int outerCount = this.numberOfMultiProcessors * this.blocksPerMultiProcessor;
+
+		long[] array = new long[arraySize];
+
+		Rootbeer rootbeer = new Rootbeer();
+		List<GpuDevice> devices = rootbeer.getDevices();
+		GpuDevice device0 = devices.get(0);
+		Context context0 = device0.createContext();
+		context0.setCacheConfig(CacheConfig.PREFER_SHARED);
+		// set threadCountX, blockCountX, threadNumber
+//		 context0.setThreadConfig(this.arraySize, outerCount, outerCount * this.arraySize);
+		 context0.setThreadConfig(this.arraySize, 1, this.arraySize);
+
+		// context0.setThreadConfig(this.arraySize, outerCount, outerCount * this.arraySize);
+//		context0.setThreadConfig(sizeBy2, outerCount, outerCount * this.arraySize);
+		int iterationsPerKernel = 1000000;
+		context0.setKernel(new GPUPiKernel(System.nanoTime(), array,
+				iterationsPerKernel));
+		context0.buildState();
+
+		// Lists to create average stats
+		List<Long> driverMemcopyToDeviceTimeList = new ArrayList<Long>(1);
+		List<Long> driverExecTimeList = new ArrayList<Long>(1);
+		List<Long> driverMemcopeFromDeviceTimeList = new ArrayList<Long>(1);
+		List<Long> totalDriverExecTimeList = new ArrayList<Long>(1);
+		List<Long> deserialTimeList = new ArrayList<Long>(1);
+		List<Long> gpuRequiredMemList = new ArrayList<Long>(1);
+		List<Long> gpuTimeList = new ArrayList<Long>(1);
+		List<Double> ratioList = new ArrayList<Double>(1);
+
+		int runs = 0;
+
+		// limit the run
+		while (runs < this.numberOfRuns) {
+			runs += 1;
+
+		    LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(System.nanoTime() / 2);
+
+
+//		    double cpuPi = this.cpuPi(1000000);
+//		    System.out.println(cpuPi);
+			// start stopwatch
+			long gpuStart = System.currentTimeMillis();
+			// run the cached throughput mode state.
+			// the data now reachable from the only
+			// GPUPiKernel is serialized to the GPU
+			context0.run();
+
+			// stats and stat output
+			long gpuStop = System.currentTimeMillis();
+			long gpuTime = gpuStop - gpuStart;
+
+			System.out.println(Arrays.toString(array));
+
+			// compute pi from the array
+			long sum = 0;
+			for (int i = 0; i < sizeBy2; ++i) {
+				sum += array[i];
+			}
+			int tries = sizeBy2 * iterationsPerKernel;
+			System.out.println("GPU Tries: "+ tries);
+			double pi = sum * 4 / (double)(tries);
+			System.out.println(pi);
+			// pull stats from the context
+			StatsRow row0 = context0.getStats();
+
+			if (this.outputConsoleStats) {
+				System.out
+						.println("The serialization time of each first run is an anomaliy and should either be looked into further or discarded");
+				System.out.println("serialization_time: "
+						+ row0.getSerializationTime());
+				System.out.println("driver_memcopy_to_device_time: "
+						+ row0.getDriverMemcopyToDeviceTime());
+				System.out.println("driver_execution_time: "
+						+ row0.getDriverExecTime());
+				System.out.println("driver_memcopy_from_device_time: "
+						+ row0.getDriverMemcopyFromDeviceTime());
+				System.out.println("total_driver_execution_time: "
+						+ row0.getTotalDriverExecutionTime());
+				System.out.println("deserialization_time: "
+						+ row0.getDeserializationTime());
+				System.out.println("gpu_required_memory: "
+						+ context0.getRequiredMemory());
+				System.out.println("gpu_time: " + gpuTime);
+			}
+
+			// stat array for csv file
+			List<java.lang.Number> stats = new ArrayList<java.lang.Number>(1);
+			List<String> statsHeader = new ArrayList<String>(1);
+
+			// csv header
+			statsHeader.add("serialization_time");
+			statsHeader.add("driver_memcopy_to_device_time");
+			statsHeader.add("driver_execution_time");
+			statsHeader.add("driver_memcopy_from_device_time");
+			statsHeader.add("total_driver_execution_time");
+			statsHeader.add("deserialization_time");
+			statsHeader.add("gpu_required_memory");
+			statsHeader.add("gpu_time");
+
+			// csv stats
+			// the serialization time of the first run is higher than any of the
+			// later runs. there is no clear indication why that is the case
+			stats.add(row0.getSerializationTime());
+			stats.add(row0.getDriverMemcopyToDeviceTime());
+			stats.add(row0.getDriverExecTime());
+			stats.add(row0.getDriverMemcopyFromDeviceTime());
+			stats.add(row0.getTotalDriverExecutionTime());
+			stats.add(row0.getDeserializationTime());
+			stats.add(context0.getRequiredMemory());
+			stats.add(gpuTime);
+
+			String fileNameInstance = this.fileName + ".csv";
+			generateCsvFile(fileNameInstance, stats, statsHeader);
+
+		}
+
+//		System.out.println("Finished " + runs + " pi runs.");
+
+		// context0.close();
+
+	}
+
+	public static void main(String[] args) {
+		// size of the inner arrays
+		int arraySize = 1024; // 2048
+
+		// number of processors and block size defines the number of inner
+		// arrays
+		// numMultiProcessors*blocksPerMultiProcessor;
+		int numberOfMultiProcessors = 4; // 14
+		int blocksPerMultiProcessor = 512; // 512
+		int numberOfRuns = 1;
+
+		GPUPi sorter = new GPUPi(arraySize, numberOfMultiProcessors,
+				blocksPerMultiProcessor, numberOfRuns);
+		sorter.computePi();
+	}
+}
+
+
+// Titan>
+// http://www.anandtech.com/show/6760/nvidias-geforce-gtx-titan-part-1/4
+// 2888 Cores, 6143 MB Dedicated Memory
+// 32 threads / warp | 64 warps / SM
+// 2048 threads / SM
+// 255kb register per thread
+// 64 FP64 CUDA cores -> 2 FP64 SM
+// 14 SM

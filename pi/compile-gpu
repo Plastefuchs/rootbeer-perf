@@ -1,0 +1,7 @@
+#!/bin/bash
+
+ant clean
+ant jar
+./pack-rootbeer
+ant jar
+java -jar ../rblib/Rootbeer.jar dist/sorter.jar dist/sorter-gpu.jar -64bit -noexceptions -shared-mem-size 8192 -noarraychecks
