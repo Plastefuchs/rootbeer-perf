@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class GPUPi {
-
+// GPUPi extends Helper
 	// size of the array
 	private int arraySize;
 	private int numberOfMultiProcessors; // 14
@@ -63,10 +63,11 @@ public class GPUPi {
 			File parameterFile = new File(this.fileName + "_parameter.csv");
 			FileWriter writer = new FileWriter(parameterFile);
 			for (Object key : this.parameter.keySet()) {
-				System.out.println(key + " - " + parameter.get(key));
-				writer.append(key + " - " + parameter.get(key));
+				System.out.println(key + "," + parameter.get(key));
+				writer.append(key + "," + parameter.get(key));
 				writer.append("\n");
 			}
+			writer.append("Zeiten in Millisekunden.");
 			writer.flush();
 			writer.close();
 		} catch (IOException e) {
@@ -187,7 +188,7 @@ public class GPUPi {
 			long gpuStop = System.currentTimeMillis();
 			long gpuTime = gpuStop - gpuStart;
 
-			System.out.println(Arrays.toString(array));
+//			System.out.println(Arrays.toString(array));
 
 			// compute pi from the array
 			long sum = 0;
