@@ -199,7 +199,7 @@ public class GPUPi {
 			for (int i = 0; i < sizeBy2; ++i) {
 				sum += array[i];
 			}
-			int tries = sizeBy2 * iterationsPerKernel;
+			int tries = sizeBy2 * this.numberOfIterationsPerKernel;
 			System.out.println("GPU Tries: " + tries);
 			double pi = sum * 4 / (double) (tries);
 			System.out.println(pi);
@@ -285,7 +285,7 @@ public class GPUPi {
 		int numberOfMultiProcessors = 2; // 14
 		int blocksPerMultiProcessor = 512; // 512
 		int numberOfRuns = 1;
-		int numberOfIterationsPerKernel = 1000000
+		int numberOfIterationsPerKernel = 1000000;
 
 		GPUPi sorter = new GPUPi(arraySize, numberOfMultiProcessors,
 				blocksPerMultiProcessor, numberOfRuns, numberOfIterationsPerKernel);
