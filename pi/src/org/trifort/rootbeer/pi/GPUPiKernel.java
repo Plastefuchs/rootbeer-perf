@@ -34,8 +34,11 @@ public class GPUPiKernel implements Kernel {
 		 
 		for (int i = 0; i < iterations; i++) {
 
+			// use lcg instead of math random, due to 702 crashes
 			double x = lcg.nextDouble(); // value between 0 and 1
 			double y = lcg.nextDouble(); // value between 0 and 1
+//			double x = Math.random();
+//			double y = Math.random();
 			double erg = x * x + y * y;
 			if (erg <= 1.0) {
 				hits++;

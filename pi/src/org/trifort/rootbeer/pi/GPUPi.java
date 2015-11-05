@@ -201,6 +201,15 @@ public class GPUPi {
 			System.out.println("GPU Tries: " + tries);
 			double pi = sum * 4 / (double) (tries);
 			System.out.println(pi);
+			long cpuStart = System.currentTimeMillis();
+
+			double cpuPi = cpuPi(tries);
+			
+			System.out.println("CPU Tries: " + tries);
+			System.out.println(cpuPi);
+			long cpuStop = System.currentTimeMillis();
+			long cpuTime = cpuStop - cpuStart;
+
 			// pull stats from the context
 			StatsRow row0 = context0.getStats();
 
@@ -222,6 +231,7 @@ public class GPUPi {
 				System.out.println("gpu_required_memory: "
 						+ context0.getRequiredMemory());
 				System.out.println("gpu_time: " + gpuTime);
+				System.out.println("cpu_time: " + cpuTime);
 			}
 
 			// stat array for csv file
@@ -237,6 +247,7 @@ public class GPUPi {
 			statsHeader.add("deserialization_time");
 			statsHeader.add("gpu_required_memory");
 			statsHeader.add("gpu_time");
+			statsHeader.add("cpu_time");
 
 			// csv stats
 			// the serialization time of the first run is higher than any of the
@@ -249,6 +260,7 @@ public class GPUPi {
 			stats.add(row0.getDeserializationTime());
 			stats.add(context0.getRequiredMemory());
 			stats.add(gpuTime);
+			stats.add(cpuTime);
 
 			String fileNameInstance = this.fileName + ".csv";
 			generateCsvFile(fileNameInstance, stats, statsHeader);
@@ -263,12 +275,12 @@ public class GPUPi {
 
 	public static void main(String[] args) {
 		// size of the inner arrays
-		int arraySize = 512; // 2048
+		int arraySize = 1024; // 2048
 
 		// number of processors and block size defines the number of inner
 		// arrays
 		// numMultiProcessors*blocksPerMultiProcessor;
-		int numberOfMultiProcessors = 14; // 14
+		int numberOfMultiProcessors = 2; // 14
 		int blocksPerMultiProcessor = 512; // 512
 		int numberOfRuns = 1;
 
