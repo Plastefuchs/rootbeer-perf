@@ -5,6 +5,7 @@
 *.csv
 #sort/.~lock.stats.csv#
 *.~lock.stats.csv#
+*.~lock.*
 
 # Created by https://www.gitignore.io/api/java
 
