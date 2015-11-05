@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class GPUPi {
-// GPUPi extends Helper
+	// GPUPi extends Helper
 	// size of the array
 	private int arraySize;
 	private int numberOfMultiProcessors; // 14
@@ -47,7 +47,7 @@ public class GPUPi {
 		Date date = new Date();
 		this.fileName = ("pi_" + dateFormat.format(date));
 
-		// ugly mapping
+		// ugly mapping for parameter file generation
 		this.parameter.put("arraySize", this.arraySize);
 		this.parameter.put("numberOfMultiProcessors",
 				this.numberOfMultiProcessors);
@@ -63,7 +63,7 @@ public class GPUPi {
 			File parameterFile = new File(this.fileName + "_parameter.csv");
 			FileWriter writer = new FileWriter(parameterFile);
 			for (Object key : this.parameter.keySet()) {
-				System.out.println(key + "," + parameter.get(key));
+				System.out.println(key + " - " + parameter.get(key));
 				writer.append(key + "," + parameter.get(key));
 				writer.append("\n");
 			}
@@ -109,34 +109,33 @@ public class GPUPi {
 		}
 	}
 
-
-	
-	public double cpuPi(long tries){
+	public double cpuPi(long tries) {
 		double inCircle = 0;
-	    LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(System.nanoTime());
-	    for (int i = 0; i < tries; i++){
-	    	double x = lcg.nextDouble();
-	    	double y = lcg.nextDouble();
-	    	double dist = Math.sqrt(x*x + y*y);
-	    	if (dist <= 1.0){
-	    		inCircle++;
-	    	}
-	    			
-	    }
-	    double pi = 4 * inCircle / tries;
-	    return pi;
+		LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(
+				System.nanoTime());
+		for (int i = 0; i < tries; i++) {
+			double x = lcg.nextDouble();
+			double y = lcg.nextDouble();
+			double dist = Math.sqrt(x * x + y * y);
+			if (dist <= 1.0) {
+				inCircle++;
+			}
+
+		}
+		double pi = 4 * inCircle / tries;
+		return pi;
 
 	}
-	
 
 	public void computePi() {
 
 		// should have 192 threads per SM
 
-//		int sizeBy2 = this.arraySize / 2;
+		// int sizeBy2 = this.arraySize / 2;
 		int sizeBy2 = this.arraySize;
 		// set size of the outer array
-		int outerCount = this.numberOfMultiProcessors * this.blocksPerMultiProcessor;
+		int outerCount = this.numberOfMultiProcessors
+				* this.blocksPerMultiProcessor;
 
 		long[] array = new long[arraySize];
 
@@ -146,11 +145,14 @@ public class GPUPi {
 		Context context0 = device0.createContext();
 		context0.setCacheConfig(CacheConfig.PREFER_SHARED);
 		// set threadCountX, blockCountX, threadNumber
-//		 context0.setThreadConfig(this.arraySize, outerCount, outerCount * this.arraySize);
-		 context0.setThreadConfig(this.arraySize, 1, this.arraySize);
+		// context0.setThreadConfig(this.arraySize, outerCount, outerCount *
+		// this.arraySize);
+		context0.setThreadConfig(this.arraySize, 1, this.arraySize);
 
-		// context0.setThreadConfig(this.arraySize, outerCount, outerCount * this.arraySize);
-//		context0.setThreadConfig(sizeBy2, outerCount, outerCount * this.arraySize);
+		// context0.setThreadConfig(this.arraySize, outerCount, outerCount *
+		// this.arraySize);
+		// context0.setThreadConfig(sizeBy2, outerCount, outerCount *
+		// this.arraySize);
 		int iterationsPerKernel = 1000000;
 		context0.setKernel(new GPUPiKernel(System.nanoTime(), array,
 				iterationsPerKernel));
@@ -172,11 +174,11 @@ public class GPUPi {
 		while (runs < this.numberOfRuns) {
 			runs += 1;
 
-		    LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(System.nanoTime() / 2);
+			LinearCongruentialRandomGenerator lcg = new LinearCongruentialRandomGenerator(
+					System.nanoTime() / 2);
 
-
-//		    double cpuPi = this.cpuPi(1000000);
-//		    System.out.println(cpuPi);
+			// double cpuPi = this.cpuPi(1000000);
+			// System.out.println(cpuPi);
 			// start stopwatch
 			long gpuStart = System.currentTimeMillis();
 			// run the cached throughput mode state.
@@ -188,7 +190,7 @@ public class GPUPi {
 			long gpuStop = System.currentTimeMillis();
 			long gpuTime = gpuStop - gpuStart;
 
-//			System.out.println(Arrays.toString(array));
+			// System.out.println(Arrays.toString(array));
 
 			// compute pi from the array
 			long sum = 0;
@@ -196,8 +198,8 @@ public class GPUPi {
 				sum += array[i];
 			}
 			int tries = sizeBy2 * iterationsPerKernel;
-			System.out.println("GPU Tries: "+ tries);
-			double pi = sum * 4 / (double)(tries);
+			System.out.println("GPU Tries: " + tries);
+			double pi = sum * 4 / (double) (tries);
 			System.out.println(pi);
 			// pull stats from the context
 			StatsRow row0 = context0.getStats();
@@ -253,7 +255,7 @@ public class GPUPi {
 
 		}
 
-//		System.out.println("Finished " + runs + " pi runs.");
+		// System.out.println("Finished " + runs + " pi runs.");
 
 		// context0.close();
 
@@ -261,12 +263,12 @@ public class GPUPi {
 
 	public static void main(String[] args) {
 		// size of the inner arrays
-		int arraySize = 1024; // 2048
+		int arraySize = 512; // 2048
 
 		// number of processors and block size defines the number of inner
 		// arrays
 		// numMultiProcessors*blocksPerMultiProcessor;
-		int numberOfMultiProcessors = 4; // 14
+		int numberOfMultiProcessors = 14; // 14
 		int blocksPerMultiProcessor = 512; // 512
 		int numberOfRuns = 1;
 
@@ -275,7 +277,6 @@ public class GPUPi {
 		sorter.computePi();
 	}
 }
-
 
 // Titan>
 // http://www.anandtech.com/show/6760/nvidias-geforce-gtx-titan-part-1/4
