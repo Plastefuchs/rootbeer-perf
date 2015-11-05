@@ -31,17 +31,19 @@ public class GPUPi {
 	private int blocksPerMultiProcessor; // 512
 	private int numberOfRuns;
 	private String fileName;
+	private int numberOfIterationsPerKernel;
 	private boolean outputConsoleStats = false;
 
 	// ugly way to create a second file with the parameters of the program
 	private Map parameter = new HashMap();
 
 	GPUPi(int arraySize, int numberOfMultiProcessors,
-			int blocksPerMultiProcessor, int numberOfRuns) {
+			int blocksPerMultiProcessor, int numberOfRuns, int numberOfIterationsPerKernel) {
 		this.arraySize = arraySize;
 		this.numberOfMultiProcessors = numberOfMultiProcessors;
 		this.blocksPerMultiProcessor = blocksPerMultiProcessor;
 		this.numberOfRuns = numberOfRuns;
+		this.numberOfIterationsPerKernel = numberOfIterationsPerKernel;
 
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Date date = new Date();
@@ -153,9 +155,9 @@ public class GPUPi {
 		// this.arraySize);
 		// context0.setThreadConfig(sizeBy2, outerCount, outerCount *
 		// this.arraySize);
-		int iterationsPerKernel = 1000000;
+		
 		context0.setKernel(new GPUPiKernel(System.nanoTime(), array,
-				iterationsPerKernel));
+				this.numberOfIterationsPerKernel));
 		context0.buildState();
 
 		// Lists to create average stats
@@ -283,9 +285,10 @@ public class GPUPi {
 		int numberOfMultiProcessors = 2; // 14
 		int blocksPerMultiProcessor = 512; // 512
 		int numberOfRuns = 1;
+		int numberOfIterationsPerKernel = 1000000
 
 		GPUPi sorter = new GPUPi(arraySize, numberOfMultiProcessors,
-				blocksPerMultiProcessor, numberOfRuns);
+				blocksPerMultiProcessor, numberOfRuns, numberOfIterationsPerKernel);
 		sorter.computePi();
 	}
 }
