@@ -30,7 +30,7 @@ public class GPUPi {
 	private int numberOfRuns;
 	private String fileName;
 	private int numberOfIterationsPerKernel;
-	private boolean outputConsoleStats = false;
+	private boolean outputConsoleStats = true;
 
 	// ugly way to create a second file with the parameters of the program
 	private Map parameter = new HashMap();
