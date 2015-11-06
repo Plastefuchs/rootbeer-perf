@@ -26,7 +26,7 @@ import java.util.Map;
 public class GPUPi {
 	// GPUPi extends Helper
 	// size of the array
-	private int arraySize;
+	private int threadCount;
 	private int numberOfMultiProcessors; // 14
 	private int blocksPerMultiProcessor; // 512
 	private int numberOfRuns;
@@ -37,26 +37,18 @@ public class GPUPi {
 	// ugly way to create a second file with the parameters of the program
 	private Map parameter = new HashMap();
 
-	GPUPi(int arraySize, int numberOfMultiProcessors,
-			int blocksPerMultiProcessor, int numberOfRuns, int numberOfIterationsPerKernel) {
-		this.arraySize = arraySize;
+	GPUPi(int threadCount, int numberOfMultiProcessors,
+			int blocksPerMultiProcessor, int numberOfRuns,
+			int numberOfIterationsPerKernel) {
+		this.threadCount = threadCount;
 		this.numberOfMultiProcessors = numberOfMultiProcessors;
 		this.blocksPerMultiProcessor = blocksPerMultiProcessor;
 		this.numberOfRuns = numberOfRuns;
 		this.numberOfIterationsPerKernel = numberOfIterationsPerKernel;
 
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 		Date date = new Date();
 		this.fileName = ("pi_" + dateFormat.format(date));
-
-		// ugly mapping for parameter file generation
-		this.parameter.put("arraySize", this.arraySize);
-		this.parameter.put("numberOfMultiProcessors",
-				this.numberOfMultiProcessors);
-		this.parameter.put("blocksPerMultiProcessor",
-				this.blocksPerMultiProcessor);
-		this.parameter.put("numberOfRuns", this.numberOfRuns);
-		this.writeParameterFile();
 
 	}
 
@@ -133,13 +125,13 @@ public class GPUPi {
 
 		// should have 192 threads per SM
 
-		// int sizeBy2 = this.arraySize / 2;
-		int sizeBy2 = this.arraySize;
-		// set size of the outer array
+		// int sizeBy2 = this.threadCount / 2;
+		int sizeBy2 = this.threadCount;
+		
 		int outerCount = this.numberOfMultiProcessors
 				* this.blocksPerMultiProcessor;
-
-		long[] array = new long[arraySize];
+		// create array to hold each thread's hit number
+		long[] array = new long[threadCount];
 
 		Rootbeer rootbeer = new Rootbeer();
 		List<GpuDevice> devices = rootbeer.getDevices();
@@ -147,15 +139,15 @@ public class GPUPi {
 		Context context0 = device0.createContext();
 		context0.setCacheConfig(CacheConfig.PREFER_SHARED);
 		// set threadCountX, blockCountX, threadNumber
-		// context0.setThreadConfig(this.arraySize, outerCount, outerCount *
-		// this.arraySize);
-		context0.setThreadConfig(this.arraySize, 1, this.arraySize);
+		// context0.setThreadConfig(this.threadCount, outerCount, outerCount *
+		// this.threadCount);
+		context0.setThreadConfig(this.threadCount, 1, this.threadCount);
 
-		// context0.setThreadConfig(this.arraySize, outerCount, outerCount *
-		// this.arraySize);
+		// context0.setThreadConfig(this.threadCount, outerCount, outerCount *
+		// this.threadCount);
 		// context0.setThreadConfig(sizeBy2, outerCount, outerCount *
-		// this.arraySize);
-		
+		// this.threadCount);
+
 		context0.setKernel(new GPUPiKernel(System.nanoTime(), array,
 				this.numberOfIterationsPerKernel));
 		context0.buildState();
@@ -206,7 +198,7 @@ public class GPUPi {
 			long cpuStart = System.currentTimeMillis();
 
 			double cpuPi = cpuPi(tries);
-			
+
 			System.out.println("CPU Tries: " + tries);
 			System.out.println(cpuPi);
 			long cpuStop = System.currentTimeMillis();
@@ -251,6 +243,12 @@ public class GPUPi {
 			statsHeader.add("gpu_time");
 			statsHeader.add("cpu_time");
 
+			statsHeader.add("Thread Count");
+			statsHeader.add("Number of Multi Processors");
+			statsHeader.add("Blocks per Multiprocessor");
+			statsHeader.add("Number of Runs");
+			statsHeader.add("Iterations per Kernel");
+			
 			// csv stats
 			// the serialization time of the first run is higher than any of the
 			// later runs. there is no clear indication why that is the case
@@ -263,6 +261,12 @@ public class GPUPi {
 			stats.add(context0.getRequiredMemory());
 			stats.add(gpuTime);
 			stats.add(cpuTime);
+			
+			stats.add(this.threadCount);
+			stats.add(this.numberOfMultiProcessors);
+			stats.add(this.blocksPerMultiProcessor);
+			stats.add(this.numberOfRuns);
+			stats.add(this.numberOfIterationsPerKernel);
 
 			String fileNameInstance = this.fileName + ".csv";
 			generateCsvFile(fileNameInstance, stats, statsHeader);
@@ -277,7 +281,8 @@ public class GPUPi {
 
 	public static void main(String[] args) {
 		// size of the inner arrays
-		int arraySize = 1024; // 2048
+
+		int threadCount = 1024; // 2048
 
 		// number of processors and block size defines the number of inner
 		// arrays
@@ -287,8 +292,31 @@ public class GPUPi {
 		int numberOfRuns = 1;
 		int numberOfIterationsPerKernel = 1000000;
 
-		GPUPi sorter = new GPUPi(arraySize, numberOfMultiProcessors,
-				blocksPerMultiProcessor, numberOfRuns, numberOfIterationsPerKernel);
+		int argThreadCount = Integer.parseInt(args[0]);
+		int argNumbersOfMultiProcessors = Integer.parseInt(args[1]);
+		int argBlocksPerMultiProcessor = Integer.parseInt(args[2]);
+		int argNumberOfRuns = Integer.parseInt(args[3]);
+		int argNumberOfIterationsPerKernel = Integer.parseInt(args[4]);
+
+		if (0 != argThreadCount) {
+			threadCount = argThreadCount;
+		}
+		if (0 != argNumbersOfMultiProcessors) {
+			numberOfMultiProcessors = argNumbersOfMultiProcessors;
+		}
+		if (0 != argBlocksPerMultiProcessor) {
+			blocksPerMultiProcessor = argBlocksPerMultiProcessor;
+		}
+		if (0 != argNumberOfRuns) {
+			numberOfRuns = argNumberOfRuns;
+		}
+		if (0 != argNumberOfIterationsPerKernel) {
+			numberOfIterationsPerKernel = argNumberOfIterationsPerKernel;
+		}
+
+		GPUPi sorter = new GPUPi(threadCount, numberOfMultiProcessors,
+				blocksPerMultiProcessor, numberOfRuns,
+				numberOfIterationsPerKernel);
 		sorter.computePi();
 	}
 }
