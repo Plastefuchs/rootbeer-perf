@@ -35,8 +35,11 @@ public class GPUSort {
 	private int blocksPerMultiProcessor = 256; // 512
 	private int numberOfRuns = 10;
 	private String fileName;
-
+	
+	private boolean outputConsoleStats = true;
+	
 	// ugly way to create a second file with the parameters of the program
+
 	private Map parameter = new HashMap();
 
 	GPUSort(int arraySize, int numberOfMultiProcessors,
@@ -46,17 +49,10 @@ public class GPUSort {
 		this.blocksPerMultiProcessor = blocksPerMultiProcessor;
 		this.numberOfRuns = numberOfRuns;
 
-		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 		Date date = new Date();
 		this.fileName = ("sort_" + dateFormat.format(date));
 		
-		// ugly mapping
-		this.parameter.put("arraySize", this.arraySize);
-		this.parameter.put("numberOfMultiProcessors", this.numberOfMultiProcessors);
-		this.parameter.put("blocksPerMultiProcessor", this.blocksPerMultiProcessor);
-		this.parameter.put("numberOfRuns", this.numberOfRuns);
-		this.writeParameterFile();
-
 	}
 
 	private void writeParameterFile(){
@@ -85,7 +81,7 @@ public class GPUSort {
 		return ret;
 	}
 
-	private boolean outputConsoleStats = false;
+
 
 	public void checkSorted(int[] array, int outerIndex) {
 		for (int index = 0; index < array.length; ++index) {
@@ -274,6 +270,12 @@ public class GPUSort {
 			statsHeader.add("deserialization_time");
 			statsHeader.add("gpu_required_memory");
 			statsHeader.add("gpu_time");
+			
+			statsHeader.add("Array Size/Thread Count");
+			statsHeader.add("Full array length");
+			statsHeader.add("Number of Multi Processors");
+			statsHeader.add("Blocks per Multiprocessor");
+			statsHeader.add("Number of Runs");
 
 			// csv stats
 			// the serialization time of the first run is higher than any of the
@@ -287,6 +289,12 @@ public class GPUSort {
 			stats.add(row0.getDeserializationTime());
 			stats.add(context0.getRequiredMemory());
 			stats.add(gpuTime);
+			
+			stats.add(this.arraySize);
+			stats.add(this.arraySize * outerCount);
+			stats.add(this.numberOfMultiProcessors);
+			stats.add(this.blocksPerMultiProcessor);
+			stats.add(this.numberOfRuns);
 
 			String fileNameInstance = this.fileName + ".csv";
 			generateCsvFile(fileNameInstance, stats, statsHeader);
@@ -329,10 +337,33 @@ public class GPUSort {
 		// numMultiProcessors*blocksPerMultiProcessor;
 		int numberOfMultiProcessors = 14; // 14
 		int blocksPerMultiProcessor = 512; // 512
-		int numberOfRuns = 100;
+		int numberOfRuns = 10;
 
+		int argArraySize = Integer.parseInt(args[0]);
+		int argNumbersOfMultiProcessors = Integer.parseInt(args[1]);
+		int argBlocksPerMultiProcessor = Integer.parseInt(args[2]);
+		int argNumberOfRuns = Integer.parseInt(args[3]);
+		
+		
+		
+		if (0 != argArraySize) {
+			arraySize = argArraySize;
+		}
+		if (0 != argNumbersOfMultiProcessors) {
+			numberOfMultiProcessors = argNumbersOfMultiProcessors;
+		}
+		if (0 != argBlocksPerMultiProcessor) {
+			blocksPerMultiProcessor = argBlocksPerMultiProcessor;
+		}
+		if (0 != argNumberOfRuns) {
+			numberOfRuns = argNumberOfRuns;
+		}
+		
 		GPUSort sorter = new GPUSort(arraySize, numberOfMultiProcessors,
 				blocksPerMultiProcessor, numberOfRuns);
 		sorter.sort();
+		
+	
+		
 	}
 }

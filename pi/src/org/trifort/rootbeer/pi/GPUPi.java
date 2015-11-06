@@ -1,5 +1,3 @@
-// TODO: cli parameter
-
 package org.trifort.rootbeer.pi;
 
 import org.trifort.rootbeer.runtime.Rootbeer;
@@ -193,8 +191,8 @@ public class GPUPi {
 			}
 			int tries = sizeBy2 * this.numberOfIterationsPerKernel;
 			System.out.println("GPU Tries: " + tries);
-			double pi = sum * 4 / (double) (tries);
-			System.out.println(pi);
+			double gpuPi = sum * 4 / (double) (tries);
+			System.out.println(gpuPi);
 			long cpuStart = System.currentTimeMillis();
 
 			double cpuPi = cpuPi(tries);
@@ -242,6 +240,9 @@ public class GPUPi {
 			statsHeader.add("gpu_required_memory");
 			statsHeader.add("gpu_time");
 			statsHeader.add("cpu_time");
+			
+			statsHeader.add("gpu_pi");
+			statsHeader.add("cpu_pi");
 
 			statsHeader.add("Thread Count");
 			statsHeader.add("Number of Multi Processors");
@@ -262,6 +263,9 @@ public class GPUPi {
 			stats.add(gpuTime);
 			stats.add(cpuTime);
 			
+			stats.add(gpuPi);
+			stats.add(cpuPi);
+			
 			stats.add(this.threadCount);
 			stats.add(this.numberOfMultiProcessors);
 			stats.add(this.blocksPerMultiProcessor);
@@ -280,8 +284,7 @@ public class GPUPi {
 	}
 
 	public static void main(String[] args) {
-		// size of the inner arrays
-
+		// number of parallel threads to use to compute pi
 		int threadCount = 1024; // 2048
 
 		// number of processors and block size defines the number of inner
