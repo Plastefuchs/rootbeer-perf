@@ -113,15 +113,6 @@ public class GPUSort {
 		}
 	}
 
-	public double averageStat(List<? extends java.lang.Number> array,
-			int numberOfRuns) {
-		double allStats = 0;
-		for (java.lang.Number item : array) {
-			allStats += item.doubleValue();
-		}
-		return allStats / numberOfRuns;
-	}
-
 	public void generateCsvFile(String sFileName, List<java.lang.Number> stats,
 			List<String> header) {
 
@@ -238,12 +229,9 @@ public class GPUSort {
 			StatsRow row0 = context0.getStats();
 
 			if (this.outputConsoleStats) {
-				System.out
-//						.println("The serialization time of each first run is an anomaliy and should either be looked into further or discarded");
-				System.out.println("serialization_time: "
-						+ row0.getSerializationTime());
-				System.out.println("driver_memcopy_to_device_time: "
-						+ row0.getDriverMemcopyToDeviceTime());
+//				System.out.println("The serialization time of each first run is an anomaliy and should either be looked into further or discarded");
+				System.out.println("serialization_time: " + row0.getSerializationTime());
+				System.out.println("driver_memcopy_to_device_time: " + row0.getDriverMemcopyToDeviceTime());
 				System.out.println("driver_execution_time: "
 						+ row0.getDriverExecTime());
 				System.out.println("driver_memcopy_from_device_time: "
@@ -339,26 +327,23 @@ public class GPUSort {
 		int blocksPerMultiProcessor = 512; // 512
 		int numberOfRuns = 10;
 
-		int argArraySize = Integer.parseInt(args[0]);
-		int argNumbersOfMultiProcessors = Integer.parseInt(args[1]);
-		int argBlocksPerMultiProcessor = Integer.parseInt(args[2]);
-		int argNumberOfRuns = Integer.parseInt(args[3]);
+		if (args.length == 4){
+		try{
+		arraySize = Integer.parseInt(args[0]);
+		numberOfMultiProcessors = Integer.parseInt(args[1]);
+		blocksPerMultiProcessor = Integer.parseInt(args[2]);
+		numberOfRuns = Integer.parseInt(args[3]);
+		}catch (NumberFormatException e){
+			System.err.println("Arguments must be integers.");
+			System.exit(1);
+		}		
 		
-		
-		
-		if (0 != argArraySize) {
-			arraySize = argArraySize;
+		}else if(args.length > 0 && args.length != 4){
+			System.err.println("Please supply array length, numbers of mp, blocks per mp and number of runs as integers");
+			System.exit(1);
 		}
-		if (0 != argNumbersOfMultiProcessors) {
-			numberOfMultiProcessors = argNumbersOfMultiProcessors;
-		}
-		if (0 != argBlocksPerMultiProcessor) {
-			blocksPerMultiProcessor = argBlocksPerMultiProcessor;
-		}
-		if (0 != argNumberOfRuns) {
-			numberOfRuns = argNumberOfRuns;
-		}
-		
+
+
 		GPUSort sorter = new GPUSort(arraySize, numberOfMultiProcessors,
 				blocksPerMultiProcessor, numberOfRuns);
 		sorter.sort();
