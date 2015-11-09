@@ -239,7 +239,7 @@ public class GPUSort {
 
 			if (this.outputConsoleStats) {
 				System.out
-						.println("The serialization time of each first run is an anomaliy and should either be looked into further or discarded");
+//						.println("The serialization time of each first run is an anomaliy and should either be looked into further or discarded");
 				System.out.println("serialization_time: "
 						+ row0.getSerializationTime());
 				System.out.println("driver_memcopy_to_device_time: "
